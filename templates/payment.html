@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Оплата USDT</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: #1a1a1a;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 450px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            border: 1px solid #333;
+        }
+        h1 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            font-size: 16px;
+            background: #222;
+            color: #fff;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+        button {
+            width: 100%;
+            padding: 16px;
+            background: linear-gradient(135deg, #4f46e5 0%, #0099cc 100%);
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(79, 70, 229, 0.4);
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .result {
+            margin-top: 25px;
+            padding: 20px;
+            background: #0d2818;
+            border: 2px solid #22c55e;
+            border-radius: 10px;
+            display: none;
+        }
+        .result.show { display: block; }
+        .result h3 { color: #22c55e; margin-bottom: 15px; }
+        .result p { margin-bottom: 10px; word-break: break-all; color: #ccc; }
+        .result .label { color: #888; font-weight: 500; }
+        .result .value { color: #fff; font-weight: 600; }
+        .copy-btn {
+            background: #22c55e;
+            color: #000;
+            margin-top: 10px;
+            padding: 10px;
+            font-size: 14px;
+        }
+        .error {
+            background: #2d1515;
+            border-color: #ef4444;
+        }
+        .error h3 { color: #ef4444; }
+        .admin-link {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .admin-link a {
+            color: #4f46e5;
+            text-decoration: none;
+            font-size: 14px;
+        }
+        }
+        .rate-display {
+            background: linear-gradient(135deg, #1e1e3f 0%, #2d2d5a 100%);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 1px solid #3d3d6b;
+        }
+        .rate-display .label {
+            color: #888;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        .rate-display .label span {
+            color: #ef4444;
+            font-size: 11px;
+        }
+        .rate-display .value {
+            color: #22c55e;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .rate-display .updating {
+            color: #666;
+            font-size: 12px;
+        }
+        .rate-progress {
+            width: 100%;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .rate-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            border-radius: 2px;
+            width: 100%;
+            transition: width 1s linear;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="rate-display">
+            <div class="label">Курс USDT/ <span id="rateCurrency">RUB</span> <span>(-3%)</span></div>
+            <div class="value" id="usdtRate">Загрузка...</div>
+            <div class="rate-progress">
+                <div class="rate-progress-bar" id="rateProgressBar"></div>
+            </div>
+        </div>
+        <h1>Оплата USDT</h1>
+        <form id="paymentForm">
+            <div class="form-group">
+                <label>Сумма USDT</label>
+                <input type="number" step="0.01" min="1" name="amount_usdt" required placeholder="Введите сумму">
+            </div>
+            <div class="form-group">
+                <label>Валюта</label>
+                <select name="currency" id="currencySelect" required>
+                    <option value="">Выберите валюту</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Банк</label>
+                <select name="bank" id="bankSelect" required disabled>
+                    <option value="">Сначала выберите валюту</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Номер телефона</label>
+                <input type="tel" name="phone" required placeholder="+7 999 123-45-67">
+            </div>
+            <button type="submit" id="submitBtn">Создать заказ</button>
+        </form>
+        
+        <div id="result" class="result">
+            <h3>Заказ создан!</h3>
+            <p><span class="label">ID заказа:</span> <span class="value" id="resOrderId"></span></p>
+            <p><span class="label">Сумма:</span> <span class="value" id="resAmount"></span> USDT</p>
+            <p><span class="label">Адрес для оплаты (TRC20):</span></p>
+            <p class="value" id="resAddress"></p>
+            <button class="copy-btn" onclick="copyAddress()">Копировать адрес</button>
+            <div style="margin-top: 15px; text-align: center;">
+                <p class="label" style="margin-bottom: 10px;">QR код для оплаты:</p>
+                <div id="qrCode" style="display: inline-block;"></div>
+            </div>
+            <p style="margin-top: 15px;"><span class="label">Статус:</span> <span class="value" id="resStatus"></span></p>
+        </div>
+        
+        <div class="admin-link">
+            <a href="/admin">Админ-панель</a>
+        </div>
+    </div>
+
+    <script>
+        let currenciesConfig = {};
+        
+        // Fetch currencies and banks on page load
+        async function fetchCurrencies() {
+            try {
+                const response = await fetch('/api/currencies');
+                const data = await response.json();
+                currenciesConfig = data.banks;
+                
+                const currencySelect = document.getElementById('currencySelect');
+                data.currencies.forEach(currency => {
+                    const option = document.createElement('option');
+                    option.value = currency;
+                    option.textContent = currency;
+                    currencySelect.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error fetching currencies:', error);
+            }
+        }
+        
+        // Update banks when currency changes
+        document.getElementById('currencySelect').addEventListener('change', function() {
+            const bankSelect = document.getElementById('bankSelect');
+            const currency = this.value;
+            
+            if (currency && currenciesConfig[currency]) {
+                bankSelect.disabled = false;
+                bankSelect.innerHTML = '<option value="">Выберите банк</option>';
+                
+                currenciesConfig[currency].forEach(bank => {
+                    const option = document.createElement('option');
+                    option.value = bank;
+                    option.textContent = bank;
+                    bankSelect.appendChild(option);
+                });
+                
+                // Update rate display
+                updateRate(currency);
+            } else {
+                bankSelect.disabled = true;
+                bankSelect.innerHTML = '<option value="">Сначала выберите валюту</option>';
+            }
+        });
+        
+        // Update rate display based on currency
+        async function updateRate(currency) {
+            try {
+                const response = await fetch(`/api/rate?currency=${currency}`);
+                const data = await response.json();
+                
+                if (data.rate) {
+                    const originalRate = parseFloat(data.rate);
+                    const discountedRate = (originalRate * 0.97).toFixed(2);
+                    document.getElementById('usdtRate').textContent = discountedRate + ' ' + getCurrencySymbol(currency);
+                    document.getElementById('rateCurrency').textContent = currency;
+                    document.querySelector('.rate-display .label span').textContent = `(-3%)`;
+                } else {
+                    document.getElementById('usdtRate').textContent = 'Курс не найден';
+                }
+            } catch (error) {
+                console.error('Rate fetch error:', error);
+                document.getElementById('usdtRate').textContent = 'Ошибка загрузки';
+            }
+        }
+        
+        function getCurrencySymbol(currency) {
+            const symbols = {
+                'RUB': '₽',
+                'USD': '$',
+                'EUR': '€',
+                'GBP': '£',
+                'KZT': '₸'
+            };
+            return symbols[currency] || '';
+        }
+        
+        document.getElementById('paymentForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const form = e.target;
+            const formData = new FormData(form);
+            
+            btn.disabled = true;
+            btn.textContent = 'Создание заказа...';
+            
+            try {
+                const payload = {
+                    amount_usdt: parseFloat(formData.get('amount_usdt')),
+                    currency: formData.get('currency'),
+                    bank: formData.get('bank'),
+                    phone: formData.get('phone')
+                };
+                console.log('Sending:', JSON.stringify(payload));
+                
+                const response = await fetch('/api/orders', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                
+                const text = await response.text();
+                console.log('Response:', text, 'Status:', response.status);
+                
+                if (!response.ok) {
+                    alert('Ошибка: ' + text);
+                    btn.disabled = false;
+                    btn.textContent = 'Создать заказ';
+                    return;
+                }
+                
+                const data = JSON.parse(text);
+                
+                if (response.ok) {
+                    document.getElementById('resOrderId').textContent = data.order_id;
+                    document.getElementById('resAmount').textContent = data.amount_usdt;
+                    document.getElementById('resAddress').textContent = data.deposit_address;
+                    document.getElementById('resStatus').textContent = data.status;
+                    document.getElementById('result').classList.add('show');
+                    document.getElementById('result').classList.remove('error');
+                    form.style.display = 'none';
+                    
+                    document.getElementById('qrCode').innerHTML = '';
+                    new QRCode(document.getElementById('qrCode'), {
+                        text: data.deposit_address,
+                        width: 180,
+                        height: 180
+                    });
+                } else {
+                    alert('Ошибка: ' + (data.detail || 'Unknown error'));
+                }
+            } catch (error) {
+                console.error(error);
+                alert('Ошибка: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Создать заказ';
+            }
+        });
+        
+        function copyAddress() {
+            const address = document.getElementById('resAddress').textContent;
+            navigator.clipboard.writeText(address).then(() => {
+                alert('Адрес скопирован!');
+            });
+        }
+        
+        let rateCountdown = 60;
+        
+        async function fetchRate() {
+            try {
+                const currency = document.getElementById('currencySelect').value || 'RUB';
+                const response = await fetch(`/api/rate?currency=${currency}`);
+                const data = await response.json();
+                
+                if (data.rate) {
+                    const originalRate = parseFloat(data.rate);
+                    const discountedRate = (originalRate * 0.97).toFixed(2);
+                    document.getElementById('usdtRate').textContent = discountedRate + ' ' + getCurrencySymbol(currency);
+                    document.getElementById('rateCurrency').textContent = currency;
+                    rateCountdown = 60;
+                } else {
+                    document.getElementById('usdtRate').textContent = 'Курс не найден';
+                }
+            } catch (error) {
+                console.error('Rate fetch error:', error);
+                document.getElementById('usdtRate').textContent = 'Ошибка загрузки';
+            }
+        }
+        
+        function updateProgressBar() {
+            rateCountdown--;
+            const percentage = (rateCountdown / 60) * 100;
+            document.getElementById('rateProgressBar').style.width = percentage + '%';
+            
+            if (rateCountdown <= 0) {
+                fetchRate();
+            }
+        }
+        
+        // Initialize
+        fetchCurrencies().then(() => {
+            // Set default currency to RUB and fetch rate
+            document.getElementById('currencySelect').value = 'RUB';
+            document.getElementById('currencySelect').dispatchEvent(new Event('change'));
+        });
+        setInterval(updateProgressBar, 1000);
+    </script>
+</body>
+</html>

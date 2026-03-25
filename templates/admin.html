@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            padding: 20px;
+            color: #fff;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        h1 { color: #fff; }
+        .back-link {
+            color: #4f46e5;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .stats {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-card {
+            background: #1a1a1a;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            flex: 1;
+            border: 1px solid #333;
+        }
+        .stat-card h3 { color: #888; font-size: 14px; margin-bottom: 5px; }
+        .stat-card .value { font-size: 24px; font-weight: 700; color: #fff; }
+        .stat-card.pending .value { color: #f59e0b; }
+        .stat-card.paid .value { color: #22c55e; }
+        .stat-card.canceled .value { color: #ef4444; }
+        
+        table {
+            width: 100%;
+            background: #1a1a1a;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            border: 1px solid #333;
+        }
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        th {
+            background: #4f46e5;
+            color: #000;
+            font-weight: 600;
+        }
+        tr:hover { background: #252525; }
+        
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        .status-pending { background: #fef3c7; color: #d97706; }
+        .status-paid { background: #dcfce7; color: #16a34a; }
+        .status-canceled { background: #fee2e2; color: #dc2626; }
+        
+        select.status-select {
+            padding: 8px 12px;
+            border: 2px solid #333;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            background: #222;
+            color: #fff;
+        }
+        select.status-select:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+        
+        .address-cell {
+            font-family: monospace;
+            font-size: 12px;
+            max-width: 200px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: #aaa;
+        }
+        
+        .refresh-btn {
+            background: #4f46e5;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .refresh-btn:hover { background: #4338ca; }
+        
+        .empty {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+        }
+        td { color: #ccc; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Админ-панель</h1>
+        <div>
+            <button class="refresh-btn" onclick="loadOrders()">Обновить</button>
+            <a href="/" class="back-link" style="margin-left: 15px;">На главную</a>
+        </div>
+    </div>
+    
+    <div class="stats">
+        <div class="stat-card pending">
+            <h3>Ожидают оплаты</h3>
+            <div class="value" id="countPending">0</div>
+        </div>
+        <div class="stat-card paid">
+            <h3>Оплачено</h3>
+            <div class="value" id="countPaid">0</div>
+        </div>
+        <div class="stat-card canceled">
+            <h3>Отменено</h3>
+            <div class="value" id="countCanceled">0</div>
+        </div>
+    </div>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Дата/Время</th>
+                <th>Сумма USDT</th>
+                <th>Валюта</th>
+                <th>Банк</th>
+                <th>Телефон</th>
+                <th>Адрес</th>
+                <th>Статус</th>
+            </tr>
+        </thead>
+        <tbody id="ordersTable">
+            <tr><td colspan="8" class="empty">Загрузка...</td></tr>
+        </tbody>
+    </table>
+
+    <script>
+        let orders = [];
+        
+        async function loadOrders() {
+            try {
+                console.log('Loading orders...');
+                const response = await fetch('/api/orders');
+                console.log('Response status:', response.status);
+                orders = await response.json();
+                console.log('Orders loaded:', orders.length);
+                renderOrders();
+            } catch (error) {
+                console.error('Error loading orders:', error);
+            }
+        }
+        
+        function renderOrders() {
+            const tbody = document.getElementById('ordersTable');
+            console.log('Rendering', orders.length, 'orders');
+            
+            if (orders.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="empty">Нет заказов</td></tr>';
+                return;
+            }
+            
+            let pending = 0, paid = 0, canceled = 0;
+            let html = '';
+            
+            for (let i = 0; i < orders.length; i++) {
+                const order = orders[i];
+                if (order.status === 'pending') pending++;
+                if (order.status === 'paid') paid++;
+                if (order.status === 'canceled') canceled++;
+                
+                const date = new Date(order.created_at);
+                const dateStr = date.toLocaleDateString('ru-RU');
+                const timeStr = date.toLocaleTimeString('ru-RU');
+                
+                const selectedPending = order.status === 'pending' ? 'selected' : '';
+                const selectedPaid = order.status === 'paid' ? 'selected' : '';
+                const selectedCanceled = order.status === 'canceled' ? 'selected' : '';
+                
+                html += '<tr>' +
+                    '<td><strong>' + order.order_id + '</strong></td>' +
+                    '<td>' + dateStr + '<br><small>' + timeStr + '</small></td>' +
+                    '<td><strong>' + order.amount_usdt + '</strong> USDT</td>' +
+                    '<td>' + (order.currency || 'RUB') + '</td>' +
+                    '<td>' + order.bank + '</td>' +
+                    '<td>' + order.phone + '</td>' +
+                    '<td class="address-cell" title="' + order.deposit_address + '">' + order.deposit_address + '</td>' +
+                    '<td>' +
+                        '<select class="status-select" onchange="updateStatus(\'' + order.order_id + '\', this.value)">' +
+                            '<option value="pending" ' + selectedPending + '>Ожидание</option>' +
+                            '<option value="paid" ' + selectedPaid + '>Оплачено</option>' +
+                            '<option value="canceled" ' + selectedCanceled + '>Отменено</option>' +
+                        '</select>' +
+                    '</td>' +
+                '</tr>';
+            }
+            
+            tbody.innerHTML = html;
+            console.log('tbody.innerHTML length:', tbody.innerHTML.length);
+            
+            document.getElementById('countPending').textContent = pending;
+            document.getElementById('countPaid').textContent = paid;
+            document.getElementById('countCanceled').textContent = canceled;
+        }
+        
+        async function updateStatus(orderId, newStatus) {
+            try {
+                const response = await fetch(`/api/orders/${orderId}`, {
+                    method: 'PATCH',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({status: newStatus})
+                });
+                
+                if (response.ok) {
+                    const order = orders.find(o => o.order_id === orderId);
+                    if (order) order.status = newStatus;
+                    renderOrders();
+                } else {
+                    alert('Ошибка обновления статуса');
+                    loadOrders();
+                }
+            } catch (error) {
+                alert('Ошибка соединения');
+                loadOrders();
+            }
+        }
+        
+        loadOrders();
+        
+        setInterval(loadOrders, 5000);
+    </script>
+</body>
+</html>
