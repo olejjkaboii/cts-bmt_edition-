@@ -155,7 +155,7 @@
 <body>
     <div class="container">
         <div class="rate-display">
-            <div class="label">Курс USDT/ <span id="rateCurrency">RUB</span> <span>(-3%)</span></div>
+            <div class="label">Курс USDT <span>(-3%)</span></div>
             <div class="value" id="usdtRate">Загрузка...</div>
             <div class="rate-progress">
                 <div class="rate-progress-bar" id="rateProgressBar"></div>
@@ -263,8 +263,6 @@
                     const originalRate = parseFloat(data.rate);
                     const discountedRate = (originalRate * 0.97).toFixed(2);
                     document.getElementById('usdtRate').textContent = discountedRate + ' ' + getCurrencySymbol(currency);
-                    document.getElementById('rateCurrency').textContent = currency;
-                    document.querySelector('.rate-display .label span').textContent = `(-3%)`;
                 } else {
                     document.getElementById('usdtRate').textContent = 'Курс не найден';
                 }
@@ -371,7 +369,6 @@
                     const originalRate = parseFloat(data.rate);
                     const discountedRate = (originalRate * 0.97).toFixed(2);
                     document.getElementById('usdtRate').textContent = discountedRate + ' ' + getCurrencySymbol(currency);
-                    document.getElementById('rateCurrency').textContent = currency;
                     rateCountdown = 60;
                 } else {
                     document.getElementById('usdtRate').textContent = 'Курс не найден';
