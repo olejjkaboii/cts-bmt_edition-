@@ -74,6 +74,15 @@
         .status-paid { background: #dcfce7; color: #16a34a; }
         .status-canceled { background: #fee2e2; color: #dc2626; }
         
+        .order-type-badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .order-type-buy { background: #dbeafe; color: #1e40af; }
+        .order-type-sell { background: #dcfce7; color: #166534; }
+        
         select.status-select {
             padding: 8px 12px;
             border: 2px solid #333;
@@ -145,6 +154,7 @@
             <tr>
                 <th>ID</th>
                 <th>Дата/Время</th>
+                <th>Тип</th>
                 <th>Сумма USDT</th>
                 <th>Валюта</th>
                 <th>Банк</th>
@@ -154,7 +164,7 @@
             </tr>
         </thead>
         <tbody id="ordersTable">
-            <tr><td colspan="8" class="empty">Загрузка...</td></tr>
+            <tr><td colspan="9" class="empty">Загрузка...</td></tr>
         </tbody>
     </table>
 
@@ -179,7 +189,7 @@
             console.log('Rendering', orders.length, 'orders');
             
             if (orders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="8" class="empty">Нет заказов</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" class="empty">Нет заказов</td></tr>';
                 return;
             }
             
@@ -200,9 +210,13 @@
                 const selectedPaid = order.status === 'paid' ? 'selected' : '';
                 const selectedCanceled = order.status === 'canceled' ? 'selected' : '';
                 
+                const orderTypeClass = order.order_type === 'sell' ? 'status-paid' : 'status-pending';
+                const orderTypeText = order.order_type === 'sell' ? 'Продажа' : 'Покупка';
+                
                 html += '<tr>' +
                     '<td><strong>' + order.order_id + '</strong></td>' +
                     '<td>' + dateStr + '<br><small>' + timeStr + '</small></td>' +
+                    '<td><span class="status-badge ' + orderTypeClass + '">' + orderTypeText + '</span></td>' +
                     '<td><strong>' + order.amount_usdt + '</strong> USDT</td>' +
                     '<td>' + (order.currency || 'RUB') + '</td>' +
                     '<td>' + order.bank + '</td>' +

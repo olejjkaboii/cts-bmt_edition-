@@ -299,7 +299,8 @@
                     amount_usdt: parseFloat(formData.get('amount_usdt')),
                     currency: formData.get('currency'),
                     bank: formData.get('bank'),
-                    phone: formData.get('phone')
+                    phone: formData.get('phone'),
+                    order_type: 'buy'  // Explicitly set as buy
                 };
                 console.log('Sending:', JSON.stringify(payload));
                 

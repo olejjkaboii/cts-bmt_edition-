@@ -298,7 +298,8 @@
                     amount_usdt: parseFloat(formData.get('amount_usdt')),
                     currency: formData.get('currency'),
                     bank: formData.get('bank'),
-                    phone: formData.get('phone')
+                    phone: formData.get('phone'),
+                    order_type: 'sell'  // Explicitly set as sell
                 };
                 console.log('Sending:', JSON.stringify(payload));
                 
