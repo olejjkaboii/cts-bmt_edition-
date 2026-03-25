@@ -218,47 +218,66 @@ async def get_usdt_rate(currency: str = "RUB"):
     try:
         import requests
         
-        # CoinGecko API for USDT price
-        # First get USDT price in USD
-        url_usdt = 'https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=usd'
-        response_usdt = requests.get(url_usdt, timeout=10)
-        data_usdt = response_usdt.json()
-        usdt_price_usd = data_usdt.get('tether', {}).get('usd', 1.0)
+        # Try CoinGecko first
+        try:
+            currency_lower = currency.lower()
+            currency_map = {
+                'rub': 'rub',
+                'usd': 'usd',
+                'eur': 'eur',
+                'gbp': 'gbp',
+                'kzt': 'kzt'
+            }
+            
+            cg_currency = currency_map.get(currency_lower, currency_lower)
+            
+            # Get price of USDT in target currency
+            url = f'https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies={cg_currency}'
+            response = requests.get(url, timeout=5)
+            data = response.json()
+            
+            if 'tether' in data and cg_currency in data['tether']:
+                rate = data['tether'][cg_currency]
+                return {"rate": rate, "currency": currency, "source": "CoinGecko"}
+        except Exception as cg_error:
+            logger.warning(f"CoinGecko API failed: {cg_error}")
         
-        # Get the target currency price
-        currency_lower = currency.lower()
+        # Fallback to Rapira for RUB
+        if currency.upper() == 'RUB':
+            try:
+                url = 'https://api.rapira.net/open/market/rates_xml'
+                headers = {'Accept': 'application/xml'}
+                response = requests.get(url, headers=headers, timeout=5)
+                response.raise_for_status()
+                
+                from xml.etree import ElementTree as ET
+                root = ET.fromstring(response.content)
+                for item in root.findall('item'):
+                    fr_elem = item.find('from')
+                    to_elem = item.find('to')
+                    out_elem = item.find('out')
+                    if fr_elem is not None and to_elem is not None and out_elem is not None:
+                        fr = fr_elem.text
+                        to = to_elem.text
+                        out = out_elem.text
+                        if fr == 'USDT' and to == 'RUB' and out is not None:
+                            return {"rate": float(out), "currency": currency, "source": "Rapira"}
+            except Exception as rapira_error:
+                logger.warning(f"Rapira API failed: {rapira_error}")
         
-        # Map currency codes to CoinGecko format
-        currency_map = {
-            'rub': 'rub',
-            'usd': 'usd',
-            'eur': 'eur',
-            'gbp': 'gbp',
-            'kzt': 'kzt'
+        # Final fallback: hardcoded rates
+        hardcoded_rates = {
+            'RUB': 75.0,  # Example rate
+            'USD': 1.0,
+            'EUR': 0.92,
+            'GBP': 0.79,
+            'KZT': 450.0
         }
         
-        cg_currency = currency_map.get(currency_lower, currency_lower)
+        if currency.upper() in hardcoded_rates:
+            return {"rate": hardcoded_rates[currency.upper()], "currency": currency, "source": "fallback"}
         
-        # Get price of USDT in target currency
-        url = f'https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies={cg_currency}'
-        response = requests.get(url, timeout=10)
-        data = response.json()
-        
-        if 'tether' in data and cg_currency in data['tether']:
-            rate = data['tether'][cg_currency]
-            return {"rate": rate, "currency": currency, "source": "CoinGecko"}
-        else:
-            # Fallback: calculate from USD rate
-            url_fiat = f'https://api.coingecko.com/api/v3/simple/price?ids=usd&vs_currencies={cg_currency}'
-            response_fiat = requests.get(url_fiat, timeout=10)
-            data_fiat = response_fiat.json()
-            
-            if 'usd' in data_fiat and cg_currency in data_fiat['usd']:
-                usd_to_currency = data_fiat['usd'][cg_currency]
-                rate = usdt_price_usd * usd_to_currency
-                return {"rate": rate, "currency": currency, "source": "CoinGecko (calculated)"}
-            else:
-                return {"error": f"Не удалось получить курс для {currency.upper()}"}
+        return {"error": f"Не удалось получить курс для {currency.upper()}"}
                 
     except Exception as e:
         logger.error(f"Rate fetch error: {e}")
