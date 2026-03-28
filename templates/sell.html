@@ -211,6 +211,21 @@
             color: #666;
             font-size: 12px;
         }
+        .rate-progress {
+            width: 100%;
+            height: 4px;
+            background: #333;
+            border-radius: 2px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .rate-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4f46e5, #7c3aed);
+            border-radius: 2px;
+            width: 100%;
+            transition: width 1s linear;
+        }
     </style>
 </head>
 <body>
@@ -218,6 +233,9 @@
         <div class="rate-display">
             <div class="label">Курс USDT <span>(-3%)</span></div>
             <div class="value" id="usdtRate">Загрузка...</div>
+            <div class="rate-progress">
+                <div class="rate-progress-bar" id="rateProgressBar"></div>
+            </div>
         </div>
         <h1>Купить USDT</h1>
         <form id="paymentForm">
@@ -486,6 +504,8 @@
             });
         }
         
+        let rateCountdown = 60;
+        
         async function fetchRate() {
             try {
                 const currency = document.getElementById('currencySelect').value || 'RUB';
@@ -496,6 +516,7 @@
                     const originalRate = parseFloat(data.rate);
                     const discountedRate = (originalRate * 0.97).toFixed(2);
                     document.getElementById('usdtRate').textContent = discountedRate + ' ' + getCurrencySymbol(currency);
+                    rateCountdown = 60;
                 } else {
                     document.getElementById('usdtRate').textContent = 'Курс не найден';
                 }
@@ -505,12 +526,23 @@
             }
         }
         
+        function updateProgressBar() {
+            rateCountdown--;
+            const percentage = (rateCountdown / 60) * 100;
+            document.getElementById('rateProgressBar').style.width = percentage + '%';
+            
+            if (rateCountdown <= 0) {
+                fetchRate();
+            }
+        }
+        
         // Initialize
         fetchCurrencies().then(() => {
             // Set default currency to RUB and fetch rate
             document.getElementById('currencySelect').value = 'RUB';
             document.getElementById('currencySelect').dispatchEvent(new Event('change'));
         });
+        setInterval(updateProgressBar, 1000);
     </script>
 </body>
 </html>
