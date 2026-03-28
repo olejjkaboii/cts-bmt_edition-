@@ -242,7 +242,7 @@
                 <div class="rate-progress-bar" id="rateProgressBar"></div>
             </div>
         </div>
-        <h1>Купить USDT</h1>
+        <h1>Получить USDT</h1>
         <form id="paymentForm">
             <div class="form-group">
                 <label>Сумма USDT</label>
@@ -264,11 +264,11 @@
                 <label>Номер телефона</label>
                 <input type="tel" name="phone" required placeholder="+7 999 123-45-67">
             </div>
-            <button type="submit" id="submitBtn">Создать заказ</button>
+            <button type="submit" id="submitBtn">Отправить валюту</button>
         </form>
         
         <div id="result" class="result">
-            <h3>Заказ создан!</h3>
+            <h3>Отправьте валюту для получения USDT</h3>
             <p><span class="label">ID заказа:</span> <span class="value" id="resOrderId"></span></p>
             <p><span class="label">Сумма:</span> <span class="value" id="resAmount"></span> USDT</p>
             <p><span class="label">Адрес для оплаты (TRC20):</span></p>
@@ -289,7 +289,7 @@
         <div class="admin-link">
             <a href="/admin">Админ-панель</a>
             <span style="margin: 0 10px; color: #666;">|</span>
-            <a href="/">Купить USDT</a>
+            <a href="/">Получить валюту</a>
         </div>
     </div>
     
@@ -297,11 +297,10 @@
     <div class="modal" id="warningModal">
         <div class="modal-content">
             <h3>⚠️ Важное предупреждение</h3>
-            <p>Внимание! После создания заказа у вас будет <strong>2 минуты</strong> на оплату. По истечении времени заказ будет автоматически отменён.</p>
-            <p>Пожалуйста, подготовьте приложение вашего банка для быстрого перевода.</p>
+            <p>Вы отправляете валюту и получаете USDT. У вас будет <strong>2 минуты</strong> на оплату.</p>
             <div class="modal-buttons">
                 <button class="modal-btn cancel" onclick="closeModal()">Отмена</button>
-                <button class="modal-btn confirm" onclick="confirmOrder()">Создать заказ</button>
+                <button class="modal-btn confirm" onclick="confirmOrder()">Отправить валюту</button>
             </div>
         </div>
     </div>
@@ -395,7 +394,7 @@
             document.getElementById('warningModal').classList.remove('show');
             const btn = document.getElementById('submitBtn');
             btn.disabled = false;
-            btn.textContent = 'Создать заказ';
+            btn.textContent = 'Отправить валюту';
         }
         
         async function confirmOrder() {
@@ -433,7 +432,7 @@
                 if (!response.ok) {
                     alert('Ошибка: ' + text);
                     btn.disabled = false;
-                    btn.textContent = 'Создать заказ';
+                    btn.textContent = 'Отправить валюту';
                     return;
                 }
                 
@@ -465,7 +464,7 @@
                 alert('Ошибка: ' + error.message);
             } finally {
                 btn.disabled = false;
-                btn.textContent = 'Создать заказ';
+                btn.textContent = 'Отправить валюту';
             }
         }
         
