@@ -87,6 +87,83 @@
         .result p { margin-bottom: 10px; word-break: break-all; color: #ccc; }
         .result .label { color: #888; font-weight: 500; }
         .result .value { color: #fff; font-weight: 600; }
+        
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal.show { display: flex; }
+        .modal-content {
+            background: #1a1a1a;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 400px;
+            text-align: center;
+            border: 2px solid #f59e0b;
+        }
+        .modal-content h3 {
+            color: #f59e0b;
+            margin-bottom: 15px;
+        }
+        .modal-content p {
+            color: #ccc;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        .modal-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+        }
+        .modal-btn.confirm {
+            background: linear-gradient(135deg, #4f46e5 0%, #0099cc 100%);
+            color: #000;
+            font-weight: 600;
+        }
+        .modal-btn.cancel {
+            background: #333;
+            color: #fff;
+        }
+        
+        /* Order timer styles */
+        .order-timer {
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            text-align: center;
+            border: 1px solid #ef4444;
+        }
+        .order-timer .timer-label {
+            color: #fca5a5;
+            font-size: 12px;
+            margin-bottom: 5px;
+        }
+        .order-timer .timer-value {
+            color: #fff;
+            font-size: 28px;
+            font-weight: bold;
+            font-family: monospace;
+        }
+        .order-timer.urgent {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
         .copy-btn {
             background: #22c55e;
             color: #000;
@@ -198,12 +275,30 @@
                 <div id="qrCode" style="display: inline-block;"></div>
             </div>
             <p style="margin-top: 15px;"><span class="label">Статус:</span> <span class="value" id="resStatus"></span></p>
+            
+            <div class="order-timer" id="orderTimer" style="display: none;">
+                <div class="timer-label">⏱️ Время на оплату заказа</div>
+                <div class="timer-value" id="timerValue">02:00</div>
+            </div>
         </div>
         
         <div class="admin-link">
             <a href="/admin">Админ-панель</a>
             <span style="margin: 0 10px; color: #666;">|</span>
             <a href="/sell">Продать USDT</a>
+        </div>
+    </div>
+    
+    <!-- Warning Modal -->
+    <div class="modal" id="warningModal">
+        <div class="modal-content">
+            <h3>⚠️ Важное предупреждение</h3>
+            <p>Внимание! После создания заказа у вас будет <strong>2 минуты</strong> на оплату. По истечении времени заказ будет автоматически отменён.</p>
+            <p>Пожалуйста, подготовьте приложение вашего банка для быстрого перевода.</p>
+            <div>
+                <button class="modal-btn cancel" onclick="closeModal()">Отмена</button>
+                <button class="modal-btn confirm" onclick="confirmOrder()">Создать заказ</button>
+            </div>
         </div>
     </div>
 
@@ -285,8 +380,25 @@
         
         document.getElementById('paymentForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            // Show warning modal
+            document.getElementById('warningModal').classList.add('show');
+        });
+        
+        let pendingFormData = null;
+        
+        function closeModal() {
+            document.getElementById('warningModal').classList.remove('show');
             const btn = document.getElementById('submitBtn');
-            const form = e.target;
+            btn.disabled = false;
+            btn.textContent = 'Создать заказ';
+        }
+        
+        async function confirmOrder() {
+            document.getElementById('warningModal').classList.remove('show');
+            
+            const btn = document.getElementById('submitBtn');
+            const form = document.getElementById('paymentForm');
             const formData = new FormData(form);
             
             btn.disabled = true;
@@ -338,6 +450,9 @@
                         width: 180,
                         height: 180
                     });
+                    
+                    // Start the 2-minute payment timer
+                    startOrderTimer();
                 } else {
                     alert('Ошибка: ' + (data.detail || 'Unknown error'));
                 }
@@ -349,6 +464,39 @@
                 btn.textContent = 'Создать заказ';
             }
         });
+        
+        let orderTimerInterval = null;
+        let orderTimeRemaining = 120; // 2 minutes in seconds
+        
+        function startOrderTimer() {
+            const timerElement = document.getElementById('orderTimer');
+            const timerValue = document.getElementById('timerValue');
+            timerElement.style.display = 'block';
+            orderTimeRemaining = 120;
+            
+            orderTimerInterval = setInterval(() => {
+                orderTimeRemaining--;
+                
+                const minutes = Math.floor(orderTimeRemaining / 60);
+                const seconds = orderTimeRemaining % 60;
+                timerValue.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                
+                // Add urgent class when less than 30 seconds remaining
+                if (orderTimeRemaining <= 30) {
+                    timerElement.classList.add('urgent');
+                }
+                
+                // Time's up
+                if (orderTimeRemaining <= 0) {
+                    clearInterval(orderTimerInterval);
+                    timerElement.classList.remove('urgent');
+                    timerValue.textContent = '00:00';
+                    alert('Время на оплату истекло! Заказ отменён.');
+                    // Optionally reload or redirect
+                    location.reload();
+                }
+            }, 1000);
+        }
         
         function copyAddress() {
             const address = document.getElementById('resAddress').textContent;
