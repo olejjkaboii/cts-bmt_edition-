@@ -41,26 +41,9 @@
         .stat-card .value { font-size: 24px; font-weight: 700; color: #fff; }
         .stat-card.pending .value { color: #f59e0b; }
         .stat-card.paid .value { color: #22c55e; }
+        .stat-card.paid .finance-info { color: #888; font-size: 12px; margin-top: 8px; line-height: 1.6; }
+        .stat-card.paid .finance-info span { color: #fff; font-weight: 600; }
         .stat-card.canceled .value { color: #ef4444; }
-        
-        .finance {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .finance-card {
-            background: #1a1a1a;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            flex: 1;
-            border: 1px solid #333;
-        }
-        .finance-card h3 { color: #888; font-size: 14px; margin-bottom: 5px; }
-        .finance-card .value { font-size: 20px; font-weight: 700; color: #fff; }
-        .finance-card.usdt .value { color: #22c55e; }
-        .finance-card.rub .value { color: #60a5fa; }
-        .finance-card.commission .value { color: #f59e0b; }
         
         table {
             width: 100%;
@@ -162,25 +145,15 @@
         <div class="stat-card paid">
             <h3>Оплачено</h3>
             <div class="value" id="countPaid">0</div>
+            <div class="finance-info">
+                USDT: <span id="totalUsdt">0</span><br>
+                В рублях: <span id="totalRub">0 ₽</span><br>
+                Выручка (3%): <span id="totalCommission">0 ₽</span>
+            </div>
         </div>
         <div class="stat-card canceled">
             <h3>Отменено</h3>
             <div class="value" id="countCanceled">0</div>
-        </div>
-    </div>
-    
-    <div class="finance">
-        <div class="finance-card usdt">
-            <h3>USDT отправлено</h3>
-            <div class="value" id="totalUsdt">0.00</div>
-        </div>
-        <div class="finance-card rub">
-            <h3>Сумма в рублях</h3>
-            <div class="value" id="totalRub">0.00 ₽</div>
-        </div>
-        <div class="finance-card commission">
-            <h3>Выручка (3%)</h3>
-            <div class="value" id="totalCommission">0.00 ₽</div>
         </div>
     </div>
     
@@ -191,6 +164,7 @@
                 <th>Дата/Время</th>
                 <th>Тип</th>
                 <th>Сумма USDT</th>
+                <th>Сумма ₽</th>
                 <th>Валюта</th>
                 <th>Банк</th>
                 <th>Телефон</th>
@@ -199,7 +173,7 @@
             </tr>
         </thead>
         <tbody id="ordersTable">
-            <tr><td colspan="9" class="empty">Загрузка...</td></tr>
+            <tr><td colspan="10" class="empty">Загрузка...</td></tr>
         </tbody>
     </table>
 
@@ -224,7 +198,7 @@
             console.log('Rendering', orders.length, 'orders');
             
             if (orders.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" class="empty">Нет заказов</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="10" class="empty">Нет заказов</td></tr>';
                 return;
             }
             
@@ -248,11 +222,14 @@
                 const orderTypeClass = order.order_type === 'sell' ? 'status-paid' : 'status-pending';
                 const orderTypeText = order.order_type === 'sell' ? 'Продажа' : 'Покупка';
                 
+                const rubAmount = order.amount_rub ? order.amount_rub.toFixed(2) + ' ₽' : '—';
+                
                 html += '<tr>' +
                     '<td><strong>' + order.order_id + '</strong></td>' +
                     '<td>' + dateStr + '<br><small>' + timeStr + '</small></td>' +
                     '<td><span class="status-badge ' + orderTypeClass + '">' + orderTypeText + '</span></td>' +
                     '<td><strong>' + order.amount_usdt + '</strong> USDT</td>' +
+                    '<td>' + rubAmount + '</td>' +
                     '<td>' + (order.currency || 'RUB') + '</td>' +
                     '<td>' + order.bank + '</td>' +
                     '<td>' + order.phone + '</td>' +
@@ -274,15 +251,22 @@
             document.getElementById('countPaid').textContent = paid;
             document.getElementById('countCanceled').textContent = canceled;
             
-            // Calculate finances
+            // Calculate finances from saved amount_rub
             let totalUsdt = 0;
+            let totalRub = 0;
             for (let i = 0; i < orders.length; i++) {
                 if (orders[i].status === 'paid') {
                     totalUsdt += orders[i].amount_usdt;
+                    if (orders[i].amount_rub) {
+                        totalRub += orders[i].amount_rub;
+                    }
                 }
             }
+            const commission = totalRub * 0.03;
+            
             document.getElementById('totalUsdt').textContent = totalUsdt.toFixed(2) + ' USDT';
-            fetchFinance(totalUsdt);
+            document.getElementById('totalRub').textContent = totalRub.toFixed(2) + ' ₽';
+            document.getElementById('totalCommission').textContent = commission.toFixed(2) + ' ₽';
         }
         
         async function updateStatus(orderId, newStatus) {
@@ -304,24 +288,6 @@
             } catch (error) {
                 alert('Ошибка соединения');
                 loadOrders();
-            }
-        }
-        
-        async function fetchFinance(totalUsdt) {
-            try {
-                const response = await fetch('/api/rate?currency=RUB');
-                const data = await response.json();
-                
-                if (data.rate) {
-                    const rate = data.rate;
-                    const totalRub = totalUsdt * rate;
-                    const commission = totalRub * 0.03;
-                    
-                    document.getElementById('totalRub').textContent = totalRub.toFixed(2) + ' ₽';
-                    document.getElementById('totalCommission').textContent = commission.toFixed(2) + ' ₽';
-                }
-            } catch (error) {
-                console.error('Rate fetch error:', error);
             }
         }
         

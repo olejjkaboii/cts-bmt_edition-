@@ -66,12 +66,14 @@ class Order(Base):
     order_id = Column(String, unique=True, index=True)
     created_at = Column(DateTime, default=datetime.now)
     amount_usdt = Column(Float)
-    currency = Column(String)  # New field for target currency
+    amount_rub = Column(Float)  # Amount in RUB at creation time
+    rate_at_creation = Column(Float)  # Rate at order creation
+    currency = Column(String)
     bank = Column(String)
     phone = Column(String)
     deposit_address = Column(String)
     status = Column(String, default="pending")
-    order_type = Column(String, default="buy")  # "buy" or "sell"
+    order_type = Column(String, default="buy")
 
 Base.metadata.create_all(bind=engine)
 
@@ -87,6 +89,12 @@ try:
         if 'order_type' not in columns:
             conn.execute(text("ALTER TABLE orders ADD COLUMN order_type TEXT"))
             conn.execute(text("UPDATE orders SET order_type = 'buy'"))
+            conn.commit()
+        if 'amount_rub' not in columns:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN amount_rub REAL"))
+            conn.commit()
+        if 'rate_at_creation' not in columns:
+            conn.execute(text("ALTER TABLE orders ADD COLUMN rate_at_creation REAL"))
             conn.commit()
         # Migration for support_tickets
         result2 = conn.execute(text("PRAGMA table_info(support_tickets)"))
@@ -237,9 +245,25 @@ async def create_order(order: OrderCreate, db: Session = Depends(get_db)):
         deposit_address = f"TR{str(uuid.uuid4()).replace('-', '')[:33]}"
         logger.warning(f"Using dummy address due to error: {deposit_address}")
     
+    # Get rate for RUB conversion
+    rate = None
+    amount_rub = None
+    try:
+        import requests
+        url = f'https://api.coingecko.com/api/v3/simple/price?ids=tether&vs_currencies=rub'
+        response = requests.get(url, timeout=5)
+        data = response.json()
+        if 'tether' in data and 'rub' in data['tether']:
+            rate = data['tether']['rub']
+            amount_rub = order.amount_usdt * rate
+    except Exception as e:
+        logger.warning(f"Could not fetch rate: {e}")
+    
     new_order = Order(
         order_id=order_id,
         amount_usdt=order.amount_usdt,
+        amount_rub=amount_rub,
+        rate_at_creation=rate,
         currency=order.currency,
         bank=order.bank,
         phone=order.phone,
@@ -267,6 +291,8 @@ async def get_orders(db: Session = Depends(get_db)):
         "order_id": o.order_id,
         "created_at": o.created_at.isoformat(),
         "amount_usdt": o.amount_usdt,
+        "amount_rub": o.amount_rub,
+        "rate_at_creation": o.rate_at_creation,
         "currency": o.currency,
         "bank": o.bank,
         "phone": o.phone,
