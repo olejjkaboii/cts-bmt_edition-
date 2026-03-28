@@ -128,6 +128,24 @@ async def admin_page(request: Request):
     with open(template_path, "r", encoding="utf-8") as f:
         return f.read()
 
+@app.get("/about", response_class=HTMLResponse)
+async def about_page(request: Request):
+    template_path = os.path.join(BASE_DIR, "templates", "about.html")
+    with open(template_path, "r", encoding="utf-8") as f:
+        return f.read()
+
+@app.get("/rules", response_class=HTMLResponse)
+async def rules_page(request: Request):
+    template_path = os.path.join(BASE_DIR, "templates", "rules.html")
+    with open(template_path, "r", encoding="utf-8") as f:
+        return f.read()
+
+@app.get("/support", response_class=HTMLResponse)
+async def support_page(request: Request):
+    template_path = os.path.join(BASE_DIR, "templates", "support.html")
+    with open(template_path, "r", encoding="utf-8") as f:
+        return f.read()
+
 @app.post("/api/orders")
 async def create_order(order: OrderCreate, db: Session = Depends(get_db)):
     logger.info(f"Creating order: {order}")
