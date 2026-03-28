@@ -41,7 +41,8 @@
         .stat-card .value { font-size: 24px; font-weight: 700; color: #fff; }
         .stat-card.pending .value { color: #f59e0b; }
         .stat-card.paid .value { color: #22c55e; }
-        .stat-card.paid .finance-info { color: #888; font-size: 12px; margin-top: 8px; line-height: 1.6; }
+        .stat-card.paid { flex: 2; }
+        .stat-card.paid .finance-info { color: #888; font-size: 12px; margin-top: 8px; display: flex; justify-content: space-around; }
         .stat-card.paid .finance-info span { color: #fff; font-weight: 600; }
         .stat-card.canceled .value { color: #ef4444; }
         
@@ -146,9 +147,9 @@
             <h3>Оплачено</h3>
             <div class="value" id="countPaid">0</div>
             <div class="finance-info">
-                USDT: <span id="totalUsdt">0</span><br>
-                В рублях: <span id="totalRub">0 ₽</span><br>
-                Выручка (3%): <span id="totalCommission">0 ₽</span>
+                <div>USDT: <span id="totalUsdt">0</span></div>
+                <div>₽: <span id="totalRub">0 ₽</span></div>
+                <div>Комиссия (3%): <span id="totalCommission">0 ₽</span></div>
             </div>
         </div>
         <div class="stat-card canceled">
