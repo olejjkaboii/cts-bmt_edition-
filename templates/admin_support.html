@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Обращения в поддержку</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a0a;
+            min-height: 100vh;
+            padding: 20px;
+            color: #fff;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+        }
+        h1 { color: #fff; font-size: 24px; }
+        .actions {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+        .refresh-btn {
+            background: #4f46e5;
+            color: #000;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .refresh-btn:hover { background: #4338ca; }
+        .back-link {
+            color: #4f46e5;
+            text-decoration: none;
+            font-weight: 500;
+        }
+        .empty {
+            text-align: center;
+            padding: 60px;
+            color: #666;
+            font-size: 16px;
+        }
+        .tiles {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .tile {
+            background: #1a1a1a;
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid #333;
+        }
+        .tile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #333;
+        }
+        .tile-id {
+            color: #888;
+            font-size: 13px;
+        }
+        .tile-date {
+            color: #555;
+            font-size: 12px;
+        }
+        .tile-row {
+            margin-bottom: 10px;
+        }
+        .tile-label {
+            color: #666;
+            font-size: 12px;
+            margin-bottom: 2px;
+        }
+        .tile-value {
+            color: #ccc;
+            font-size: 14px;
+            word-break: break-all;
+        }
+        .tile-message {
+            background: #111;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 12px 0;
+            color: #aaa;
+            font-size: 14px;
+            line-height: 1.5;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+        .status-btns {
+            display: flex;
+            gap: 8px;
+            margin-top: 15px;
+            padding-top: 12px;
+            border-top: 1px solid #333;
+        }
+        .status-btn {
+            flex: 1;
+            padding: 8px 4px;
+            border: 2px solid #333;
+            border-radius: 6px;
+            background: transparent;
+            color: #888;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .status-btn:hover { border-color: #555; }
+        .status-btn.active-pending {
+            border-color: #f59e0b;
+            background: #422006;
+            color: #f59e0b;
+        }
+        .status-btn.active-rejected {
+            border-color: #ef4444;
+            background: #450a0a;
+            color: #ef4444;
+        }
+        .status-btn.active-resolved {
+            border-color: #22c55e;
+            background: #052e16;
+            color: #22c55e;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Обращения в поддержку</h1>
+        <div class="actions">
+            <button class="refresh-btn" onclick="loadTickets()">Обновить</button>
+            <a href="/admin" class="back-link">К заказам</a>
+            <a href="/" class="back-link">На главную</a>
+        </div>
+    </div>
+    
+    <div id="tiles" class="tiles">
+        <div class="empty">Загрузка...</div>
+    </div>
+
+    <script>
+        async function loadTickets() {
+            try {
+                const response = await fetch('/api/support');
+                const tickets = await response.json();
+                renderTickets(tickets);
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+        
+        function renderTickets(tickets) {
+            const container = document.getElementById('tiles');
+            
+            if (tickets.length === 0) {
+                container.innerHTML = '<div class="empty">Нет обращений</div>';
+                return;
+            }
+            
+            let html = '';
+            tickets.forEach(t => {
+                const date = new Date(t.created_at);
+                const dateStr = date.toLocaleDateString('ru-RU') + ' ' + date.toLocaleTimeString('ru-RU');
+                
+                const pending = t.status === 'pending' ? 'active-pending' : '';
+                const rejected = t.status === 'rejected' ? 'active-rejected' : '';
+                const resolved = t.status === 'resolved' ? 'active-resolved' : '';
+                
+                html += `
+                    <div class="tile">
+                        <div class="tile-header">
+                            <span class="tile-id">Обращение #${t.id}</span>
+                            <span class="tile-date">${dateStr}</span>
+                        </div>
+                        ${t.deposit_address ? `<div class="tile-row"><div class="tile-label">Адрес оплаты</div><div class="tile-value">${t.deposit_address}</div></div>` : ''}
+                        ${t.order_id ? `<div class="tile-row"><div class="tile-label">ID заказа</div><div class="tile-value">${t.order_id}</div></div>` : ''}
+                        <div class="tile-row"><div class="tile-label">Email</div><div class="tile-value">${t.email}</div></div>
+                        <div class="tile-message">${t.message}</div>
+                        <div class="status-btns">
+                            <button class="status-btn ${pending}" onclick="updateStatus(${t.id}, 'pending')">В ожидании</button>
+                            <button class="status-btn ${rejected}" onclick="updateStatus(${t.id}, 'rejected')">Отклонено</button>
+                            <button class="status-btn ${resolved}" onclick="updateStatus(${t.id}, 'resolved')">Решено</button>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        async function updateStatus(id, status) {
+            try {
+                await fetch(`/api/support/${id}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status })
+                });
+                loadTickets();
+            } catch (error) {
+                alert('Ошибка обновления');
+            }
+        }
+        
+        loadTickets();
+        setInterval(loadTickets, 10000);
+    </script>
+</body>
+</html>

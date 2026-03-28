@@ -90,6 +90,12 @@ try:
             # Set default order_type for existing orders (assume they are buys)
             conn.execute(text("UPDATE orders SET order_type = 'buy'"))
             conn.commit()
+    # Migration for support_tickets
+    result2 = conn.execute(text("PRAGMA table_info(support_tickets)"))
+    columns2 = [row[1] for row in result2.fetchall()]
+    if 'status' not in columns2:
+        conn.execute(text("ALTER TABLE support_tickets ADD COLUMN status TEXT DEFAULT 'pending'"))
+        conn.commit()
 except Exception as e:
     logger.error(f"Migration error: {e}")
 
@@ -124,6 +130,7 @@ class SupportTicket(Base):
     order_id = Column(String, nullable=True)
     email = Column(String)
     message = Column(String)
+    status = Column(String, default="pending")
 
 Base.metadata.create_all(bind=engine)
 
@@ -163,6 +170,12 @@ async def support_page(request: Request):
     with open(template_path, "r", encoding="utf-8") as f:
         return f.read()
 
+@app.get("/admin/support", response_class=HTMLResponse)
+async def admin_support_page(request: Request):
+    template_path = os.path.join(BASE_DIR, "templates", "admin_support.html")
+    with open(template_path, "r", encoding="utf-8") as f:
+        return f.read()
+
 @app.post("/api/support")
 async def submit_support(ticket: SupportRequest, db: Session = Depends(get_db)):
     new_ticket = SupportTicket(
@@ -176,6 +189,30 @@ async def submit_support(ticket: SupportRequest, db: Session = Depends(get_db)):
     db.refresh(new_ticket)
     logger.info(f"Support ticket created: {new_ticket.id}")
     return {"status": "ok", "ticket_id": new_ticket.id}
+
+@app.get("/api/support")
+async def get_support_tickets(db: Session = Depends(get_db)):
+    tickets = db.query(SupportTicket).order_by(SupportTicket.created_at.desc()).all()
+    return [{
+        "id": t.id,
+        "created_at": t.created_at.isoformat(),
+        "deposit_address": t.deposit_address,
+        "order_id": t.order_id,
+        "email": t.email,
+        "message": t.message,
+        "status": t.status
+    } for t in tickets]
+
+@app.patch("/api/support/{ticket_id}")
+async def update_support_ticket(ticket_id: int, update: OrderUpdate, db: Session = Depends(get_db)):
+    ticket = db.query(SupportTicket).filter(SupportTicket.id == ticket_id).first()
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Обращение не найдено")
+    if update.status not in ["pending", "rejected", "resolved"]:
+        raise HTTPException(status_code=400, detail="Неверный статус")
+    ticket.status = update.status  # type: ignore
+    db.commit()
+    return {"status": "success", "new_status": ticket.status}
 
 @app.post("/api/orders")
 async def create_order(order: OrderCreate, db: Session = Depends(get_db)):
