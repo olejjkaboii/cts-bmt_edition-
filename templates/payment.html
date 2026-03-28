@@ -125,7 +125,6 @@
             border-radius: 8px;
             font-size: 16px;
             cursor: pointer;
-            margin: 0 10px;
         }
         .modal-btn.confirm {
             background: linear-gradient(135deg, #4f46e5 0%, #0099cc 100%);
@@ -135,6 +134,11 @@
         .modal-btn.cancel {
             background: #333;
             color: #fff;
+        }
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
         }
         
         /* Order timer styles */
@@ -295,7 +299,7 @@
             <h3>⚠️ Важное предупреждение</h3>
             <p>Внимание! После создания заказа у вас будет <strong>2 минуты</strong> на оплату. По истечении времени заказ будет автоматически отменён.</p>
             <p>Пожалуйста, подготовьте приложение вашего банка для быстрого перевода.</p>
-            <div>
+            <div class="modal-buttons">
                 <button class="modal-btn cancel" onclick="closeModal()">Отмена</button>
                 <button class="modal-btn confirm" onclick="confirmOrder()">Создать заказ</button>
             </div>
