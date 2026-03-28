@@ -82,20 +82,18 @@ try:
         columns = [row[1] for row in result.fetchall()]
         if 'currency' not in columns:
             conn.execute(text("ALTER TABLE orders ADD COLUMN currency TEXT"))
-            # Set default currency for existing orders
             conn.execute(text("UPDATE orders SET currency = 'RUB'"))
             conn.commit()
         if 'order_type' not in columns:
             conn.execute(text("ALTER TABLE orders ADD COLUMN order_type TEXT"))
-            # Set default order_type for existing orders (assume they are buys)
             conn.execute(text("UPDATE orders SET order_type = 'buy'"))
             conn.commit()
-    # Migration for support_tickets
-    result2 = conn.execute(text("PRAGMA table_info(support_tickets)"))
-    columns2 = [row[1] for row in result2.fetchall()]
-    if 'status' not in columns2:
-        conn.execute(text("ALTER TABLE support_tickets ADD COLUMN status TEXT DEFAULT 'pending'"))
-        conn.commit()
+        # Migration for support_tickets
+        result2 = conn.execute(text("PRAGMA table_info(support_tickets)"))
+        columns2 = [row[1] for row in result2.fetchall()]
+        if 'status' not in columns2:
+            conn.execute(text("ALTER TABLE support_tickets ADD COLUMN status TEXT DEFAULT 'pending'"))
+            conn.commit()
 except Exception as e:
     logger.error(f"Migration error: {e}")
 
