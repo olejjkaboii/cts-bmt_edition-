@@ -110,6 +110,23 @@ class OrderCreate(BaseModel):
 class OrderUpdate(BaseModel):
     status: str
 
+class SupportRequest(BaseModel):
+    deposit_address: Optional[str] = None
+    order_id: Optional[str] = None
+    email: str
+    message: str
+
+class SupportTicket(Base):
+    __tablename__ = "support_tickets"
+    id = Column(Integer, primary_key=True, index=True)
+    created_at = Column(DateTime, default=datetime.now)
+    deposit_address = Column(String, nullable=True)
+    order_id = Column(String, nullable=True)
+    email = Column(String)
+    message = Column(String)
+
+Base.metadata.create_all(bind=engine)
+
 @app.get("/", response_class=HTMLResponse)
 async def payment_page(request: Request):
     template_path = os.path.join(BASE_DIR, "templates", "payment.html")
@@ -145,6 +162,20 @@ async def support_page(request: Request):
     template_path = os.path.join(BASE_DIR, "templates", "support.html")
     with open(template_path, "r", encoding="utf-8") as f:
         return f.read()
+
+@app.post("/api/support")
+async def submit_support(ticket: SupportRequest, db: Session = Depends(get_db)):
+    new_ticket = SupportTicket(
+        deposit_address=ticket.deposit_address,
+        order_id=ticket.order_id,
+        email=ticket.email,
+        message=ticket.message
+    )
+    db.add(new_ticket)
+    db.commit()
+    db.refresh(new_ticket)
+    logger.info(f"Support ticket created: {new_ticket.id}")
+    return {"status": "ok", "ticket_id": new_ticket.id}
 
 @app.post("/api/orders")
 async def create_order(order: OrderCreate, db: Session = Depends(get_db)):

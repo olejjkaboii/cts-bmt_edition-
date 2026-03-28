@@ -20,26 +20,157 @@
             background: #1a1a1a;
             border-radius: 20px;
             padding: 40px;
-            max-width: 600px;
+            max-width: 500px;
             width: 100%;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
             border: 1px solid #333;
-            text-align: center;
         }
-        h1 { margin-bottom: 20px; }
-        p { color: #888; margin-bottom: 30px; }
-        a {
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 24px;
+        }
+        .form-group {
+            margin-bottom: 18px;
+        }
+        label {
+            display: block;
+            margin-bottom: 6px;
+            color: #888;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #333;
+            border-radius: 10px;
+            font-size: 15px;
+            background: #222;
+            color: #fff;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #4f46e5;
+        }
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+        .hint {
+            font-size: 12px;
+            color: #555;
+            margin-top: 4px;
+        }
+        button {
+            width: 100%;
+            padding: 14px;
+            background: linear-gradient(135deg, #4f46e5 0%, #0099cc 100%);
+            color: #000;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .back-link {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
             color: #4f46e5;
             text-decoration: none;
             font-size: 14px;
         }
+        .success {
+            display: none;
+            background: #0d2818;
+            border: 2px solid #22c55e;
+            border-radius: 10px;
+            padding: 20px;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .success.show { display: block; }
+        .success h3 { color: #22c55e; margin-bottom: 10px; }
+        .success p { color: #aaa; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Поддержка</h1>
-        <p>Страница в разработке</p>
-        <a href="/">На главную</a>
+        <form id="supportForm">
+            <div class="form-group">
+                <label>Адрес оплаты</label>
+                <input type="text" name="deposit_address" placeholder="TR...">
+                <div class="hint">Если есть</div>
+            </div>
+            <div class="form-group">
+                <label>ID заказа</label>
+                <input type="text" name="order_id" placeholder="XXXX-XXXX">
+                <div class="hint">Если есть</div>
+            </div>
+            <div class="form-group">
+                <label>Email для обратной связи</label>
+                <input type="email" name="email" required placeholder="example@mail.com">
+            </div>
+            <div class="form-group">
+                <label>Ваше обращение</label>
+                <textarea name="message" required placeholder="Опишите вашу проблему или вопрос..."></textarea>
+            </div>
+            <button type="submit" id="submitBtn">Отправить</button>
+        </form>
+        
+        <div class="success" id="successMsg">
+            <h3>Отправлено!</h3>
+            <p>Мы свяжемся с вами в ближайшее время.</p>
+        </div>
+        
+        <a href="/" class="back-link">На главную</a>
     </div>
+
+    <script>
+        document.getElementById('supportForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Отправка...';
+            
+            const formData = new FormData(e.target);
+            const data = {
+                deposit_address: formData.get('deposit_address') || null,
+                order_id: formData.get('order_id') || null,
+                email: formData.get('email'),
+                message: formData.get('message')
+            };
+            
+            try {
+                const response = await fetch('/api/support', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                if (response.ok) {
+                    document.getElementById('supportForm').style.display = 'none';
+                    document.getElementById('successMsg').classList.add('show');
+                } else {
+                    alert('Ошибка при отправке');
+                    btn.disabled = false;
+                    btn.textContent = 'Отправить';
+                }
+            } catch (error) {
+                alert('Ошибка: ' + error.message);
+                btn.disabled = false;
+                btn.textContent = 'Отправить';
+            }
+        });
+    </script>
 </body>
 </html>
